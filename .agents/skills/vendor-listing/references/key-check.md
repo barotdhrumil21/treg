@@ -28,6 +28,7 @@ fit which API behavior. The fields are documented on the dataclass in `src/treg/
 | Two JSON-body credentials and the key cannot be verified alone | both `location="json"` plus `probe_deferred_statuses` on the "incomplete pair" status; connect stores `health_status="unknown"` until the second arrives | Adyntel `POST /facebook` 422 |
 | Two credentials accepted as HTTP Basic `a:b` | one pasted `key:token`, Basic + base64; no second slot | PredictLeads |
 | A demo host answers 200 to anything | pin the host that rejects | CoinGecko |
+| An invalid key and a bad request share a status, told apart only by an error code | no field reads a code's value yet: probe with the cheapest paid call and state its price in `setup_note` | Brave Search |
 | Accepts any key on every endpoint | drop the provider | Alpha Vantage, ScrapeCreators |
 | Ongoing tool health check | `probe_path` (cheap GET on `base_url`) | most |
 

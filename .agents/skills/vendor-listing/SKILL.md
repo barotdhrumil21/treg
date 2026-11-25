@@ -16,8 +16,15 @@ One pull request on superdesigndev/treg adds one API. The pull request is the wh
 treg's maintainers then verify it and email the contact address in its description about the
 next steps.
 
-Needs: a clone of the repository, `uv`, and a key for the API in an environment variable. Never
-write the key into a file, a commit or the pull request.
+Needs: a clone of the repository with `origin` fetched (`git fetch origin`), `uv`, npm for the
+full test run, and a key for the API in an environment variable. Never write the key into a file,
+a commit or the pull request.
+
+When the API does something this skill does not cover (two APIs or pricing models to choose from,
+vendor sources that disagree, a price that has several parts or is missing for some modes, a request
+value that must be fixed, an endpoint that answers before its work is done, a setup step beyond the
+key), list what you can and describe the rest under "Open questions" in the pull request.
+Maintainers decide those; do not guess.
 
 Reference files, one level down:
 
@@ -47,7 +54,7 @@ Listing progress:
 
 The pull request changes only these files:
 
-- `src/treg/oauth_providers.py`: the registry entry
+- `src/treg/oauth_providers.py`: the registry entry, and nothing else in that file
 - `src/treg/web/logos/<service>.svg`: the logo
 - `src/treg/catalog/<service>.yaml`: the catalog file
 - `src/treg/catalog/fx.yaml`: only when prices are in credits
@@ -79,6 +86,12 @@ Favor:
 - free count, preview or pre-flight endpoints that size a query before paying for it;
 - the cheapest tier of an operation, beside the default one.
 
+Leave out endpoints that manage the caller's own account (settings, saved lists, reports, users) or
+change data in it, unless managing that account is what the API is for. Mark any you do list
+`scope: own_account`: treg never serves those on its own key. List one row per operation: when the
+API offers the same operation as GET and POST, list the form its docs lead with, and the other only
+if it can do something the first cannot.
+
 ### 3. Pick a capability for each
 
 A capability (`people.email.find`) names the job an endpoint does and puts it beside other
@@ -89,12 +102,18 @@ providers doing that job.
    company's employees fit `people.search`); never create a near-duplicate.
 2. Only when none fits, propose one under `proposed_capabilities:` in your own catalog file. If
    another provider has an endpoint doing that job without a capability, name it in the pull request.
+3. Name a proposal like the existing ones on the same platform: `<platform>.<object>.<action>`,
+   the object singular for one item (`amazon.product.detail`), and the platform's own pattern for
+   finding many (Amazon has `amazon.search.products`, so categories are `amazon.search.categories`).
+   Prefer the actions the catalog uses most: `detail` for one item by id, `list` for a fixed list,
+   `search` for a query.
 
 ### 4. Registry entry and logo
 
 Add an `OAuthProvider(auth_kind="key", ...)` to `src/treg/oauth_providers.py`, shaped like the
 example's, and add it to the provider tuple that builds `REGISTRY`, beside providers of the same
-`category`.
+`category`. `category` is one of `CATEGORY_ORDER` in that file; never add one. If none fits, use the
+closest and say so in the pull request.
 
 - `service` is the brand name in lowercase without spaces (`pinpointdata`). It is also the catalog
   file name, its `provider`, and the `fx.yaml` key.
@@ -103,8 +122,8 @@ example's, and add it to the provider tuple that builds `REGISTRY`, beside provi
 - `probe_path` is the free endpoint from step 1.
 - If the API answers 200 to an invalid key, add the field that tells them apart, from
   [references/key-check.md](references/key-check.md).
-- A header every call needs (an API version) goes in `required_headers=(("name", "value"),)`, plus a
-  row in `src/treg/providers.py` `CATALOG`, as Crustdata's is.
+- A header every call needs (an API version) goes in `required_headers=(("name", "value"),)`.
+- A setup step beyond the key (a profile to complete, a plan to enable) goes in `setup_steps`.
 
 The logo is your own icon as an SVG (an embedded PNG is fine, as `hunter.svg` does), or a neutral
 lettermark (a letter on a plain shape).
@@ -154,7 +173,8 @@ that name `cost.*` refer to the view treg derives from your `price`, `reserve` a
 
 ### 7. Verify live with your own key
 
-1. Call `probe_path` with a made-up key. Record the exact status and body, with the date.
+1. Call `probe_path` with your key and with a made-up key. Record both statuses and bodies, with
+   the date.
 2. Run every `test_request`, fix what fails, and run again until all pass:
 
    ```bash
@@ -168,8 +188,8 @@ that name `cost.*` refer to the view treg derives from your `price`, `reserve` a
    - Observe a charge on a target your key has not queried before; repeats can be cached and free.
    - A deliberate miss (a target chosen so a pay-on-success endpoint charges nothing) proves only
      that a miss is free. Observe one hit on a real target too.
-4. Call each endpoint that has a `miss` rule with a target that cannot exist. Record the status,
-   body, latency and charge.
+4. Call each endpoint that has a `miss` rule with a target that cannot exist (a search takes a
+   nonsense keyword). Record the status, body, latency and charge.
 5. Run the remaining checks:
 
    ```bash
@@ -193,8 +213,9 @@ Contact: <a team address, e.g. partnerships@yourapi.example; the repository is p
 |---|---|---|---|---|---|---|
 | <id> | 200 | <target> | <charge> | <price> | ✅ | <charge field, rate-card endpoint, or balance before → after> |
 
+Valid key on <probe_path> (<date>): <status> <body>
 Invalid key on <probe_path> (<date>): <status> <body>
-Miss: <id> on <target>: <status> <body>, <latency>, <charge>
+Miss: <id> on <target>: <status> <body>, <latency>, <charge>   (one line per endpoint with a miss rule)
 
 ## Endpoint map
 
@@ -206,6 +227,10 @@ Excluded: <endpoint> (<reason>), ...
 <pricing page URL>, <the plan or rate the prices come from>, <billing model: per call, per result,
 per success, credits>.
 OpenAPI: <URL, or none>
+
+## Open questions
+
+<what the skill did not cover, and endpoints that save something in the caller's account; or none>
 
 catalog_validate.py: <result>. pytest: <result>.
 ```

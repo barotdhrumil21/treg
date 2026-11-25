@@ -4,7 +4,8 @@
 
 - 1. Gate on the evidence
 - 2. Verify it yourself
-- 3. Finish what a vendor cannot (platform-key slot, modal pricing, extended tier, docs)
+- 3. Finish what a vendor cannot (open questions, routing adapters, platform-key slot, modal
+  pricing, extended tier, docs)
 - Done means
 - Choosing providers for a category
 
@@ -75,6 +76,22 @@ tell them to rotate it.
    cheapest operation tiers, deliberate-miss test requests labelled with the hit price observed once.
 
 ## 3. Finish what a vendor cannot
+
+**Open questions.** Settle each one the description lists before merging. An endpoint that saves
+something in the caller's account needs the durable-object contract (`managed_resource`,
+`catalog.md`) or leaves the listing; one that answers before its work is done needs the `async`
+declaration.
+
+**Routing adapters.** For each endpoint whose capability has a contract in `contracts.yaml`, add an
+adapter to `adapters.yaml` (`accepts`, `in`, `out`, a `max` when the endpoint caps a count; a v2
+row's own `miss` rule judges). It is verified at load against the endpoint's `test_request` and its
+example, so add it after the examples; `tests/test_routing.py` pins it. Then check the miss under
+`treg.<capability>` (step 2.4) and place the provider with the contract's `prefer` or `ask_last`.
+The keys are in `catalog.md`, "Adapters".
+
+**Local scanner row.** Add the provider to `src/treg/providers.py` `CATALOG` (its key variable,
+`base_url`, auth shape, probe and any `required_headers`), then regenerate the Go CLI's copy with the
+command `tests/cli_go/test_upload_parity.py` prints.
 
 **Platform-key slot**, so treg can serve the endpoints on its own key. Every listing aims for it; a
 listing without one states why (no self-serve pricing, `own_account` data, sales-gated).

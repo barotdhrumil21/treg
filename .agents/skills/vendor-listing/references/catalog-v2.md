@@ -41,10 +41,10 @@ opts out.
 | `id` | `<service>.` + the capability: `acmeseo.web.backlinks.summary` |
 | `capability` | from `capabilities.yaml`, or one proposed in this file |
 | `platform` | what the data is about (`web`, `people`, `amazon`), usually the capability's first part |
-| `scope` | `any_account` (data about anything) or `own_account` (the caller's own account) |
+| `scope` | `any_account` (data about anything) or `own_account` (the caller's own account; never served on treg's key) |
 | `method`, `path` | `path` relative to `base_url`; keep a trailing slash the API redirects to |
 | `name`, `summary`, `note` | see "`summary` and `note`" |
-| `input` | parameters under `queryParams`, `pathParams` or `body` |
+| `input` | parameters under `queryParams`, `pathParams` or `body`; a form body adds `bodyType: form` (JSON needs none) |
 | `test_request` | the values verification sends, under the same three keys |
 | `price`, `provenance` | below |
 | `reserve`, `settle`, `bill`, `miss`, `expect`, `error` | below, when needed |
@@ -56,8 +56,9 @@ opts out.
 An endpoint without parameters leaves `input` out and sends `test_request: {queryParams: {}}`.
 
 Each parameter: `type` (`string`, `integer`, `number`, `boolean`, `object`, or `array` with
-`items`), `required`, `example`, and when they apply `enum`, `min`/`max` (numbers),
-`minLength`/`maxLength` (strings), `note` (constraints and defaults).
+`items`), `required`, `example`, and when they apply `default`, `enum`, `min`/`max` (numbers),
+`minLength`/`maxLength` (strings), `note` (constraints). Write `enum` when the API refuses other
+values and the list is short; a long list (country or language codes) is described in `note`.
 
 ## `price` and `provenance`
 
@@ -69,8 +70,10 @@ price: {value: '2.00', currency: USD, per: 1000, unit: row}
 price: {value: '1', currency: credit, per: 1, unit: call, note: "a miss is free"}
 ```
 
-`unit` is one of `call`, `result`, `row`, `record`, `keyword`, `page`, `character` and a few more;
-the validator lists them. `price.note` holds what a caller must know about the charge.
+`unit` names what one unit is: `call`, or the thing counted, closest to the vendor's own word
+(`result` for search hits, `record` for a looked-up record, `row` for exported rows; `keyword`,
+`page`, `character` and more, which the validator lists). `price.note` holds what a caller must
+know about the charge.
 
 - A free endpoint: `price: {value: '0', currency: USD, unit: call}`, even in a credit-priced file.
 - Charged per whole block: `round: up`. "1 credit per 10 rows, rounded up" is
@@ -111,9 +114,10 @@ Without them, one call costs one `per` of `price`.
     `{entities: {from: query.asin, max: 100}}`.
 - `settle` is what the answer says was used:
   - `count`: items returned. `{count: {path: response.backlinks}}`.
-  - `reported`: the answer states the charge. `{reported: {path: response.credits_used, unit: credit}}`.
-    Prefer it when the answer carries the charge: it bills exactly what the API metered. A `unit`
-    in credits needs the `fx.yaml` rate too.
+  - `reported`: the answer states the charge, in its body (`{reported: {path:
+    response.credits_used, unit: credit}}`) or in a response header (`{reported: {header:
+    x-cost-usd, unit: usd}}`). Prefer it whenever the answer carries the charge: it bills exactly
+    what the API metered. A `unit` in credits needs the `fx.yaml` rate too.
 
 ## Outcome rules: `bill`, `miss`, `expect`, `error`, and the order they apply in
 
@@ -130,6 +134,7 @@ error, and bills and routes by it.
 - `expect`: what every good answer carries, when a 2xx can still be a failure.
   `expect: {path: response.code, op: equals, value: 0}`.
 - `error`: a 2xx that is an error. `error: {when: {path: response.error, op: present}}`.
+  Required when the API can answer an error with a 2xx; without it that answer counts as a hit.
 
 The order:
 
